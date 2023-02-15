@@ -3,7 +3,6 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"sync"
 )
 
 // Rappresenta quando la connessione TCP è stabilita con il nodo
@@ -15,20 +14,6 @@ type TCPPeer struct {
 	outbound bool
 }
 
-type TCPTransportOpts struct {
-	ListenAddr    string
-	HandShakeFunc HandShakeFunc
-	Decoder       Decoder
-}
-
-type TCPTransport struct {
-	TCPTransportOpts
-	listener net.Listener
-
-	mu    sync.RWMutex
-	peers map[net.Addr]Peer
-}
-
 // Crea un nuvo TCP peer
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
@@ -37,11 +22,39 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+// Chiusura dell'interfaccia del Peer
+func (p *TCPPeer) Close() error {
+	return p.conn.Close()
+}
+
+type TCPTransportOpts struct {
+	ListenAddr    string
+	HandShakeFunc HandShakeFunc
+	Decoder       Decoder
+	OnPeer        func(Peer) error
+}
+
+type TCPTransport struct {
+	TCPTransportOpts
+	listener net.Listener
+	rpcch    chan RPC
+}
+
 // Crea un nupvp transport TCP
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
+		rpcch:            make(chan RPC),
 	}
+}
+
+/*
+Cosume impremente l'interfaccia trapsort e
+ritorno la sola luttare del channel
+per leggere il messagio in arrivo da un altro peer della rete
+*/
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcch
 }
 
 // Qui rimane in ascolto
@@ -76,12 +89,23 @@ type Temp struct{}
 
 // Gestisce la nuove connessioni
 func (t *TCPTransport) handleConn(conn net.Conn) {
+	var err error
+	defer func() {
+		fmt.Printf("Dropping perr connection: %s", err)
+		conn.Close()
+	}()
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.HandShakeFunc(peer); err != nil {
-		conn.Close()
-		fmt.Printf("TPC handshake error: %s\n", err)
+	if err = t.HandShakeFunc(peer); err != nil {
+		//conn.Close()
+		//fmt.Printf("TPC handshake error: %s\n", err)
 		return
+	}
+
+	if t.OnPeer != nil {
+		if err = t.OnPeer(peer); err != nil {
+			return
+		}
 	}
 
 	/*
@@ -105,15 +129,15 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 
 	*/
 	//Loop di lettura
-	msg := &Message{}
+	rpc := RPC{}
 	for {
-
-		if err := t.Decoder.Decode(conn, msg); err != nil {
-			fmt.Printf("TPC error: %s\n", err)
-			continue
+		err = t.Decoder.Decode(conn, &rpc)
+		if err != nil {
+			return
 		}
-		msg.From = conn.RemoteAddr()
-		fmt.Printf("Message: %+v\n", msg)
+		rpc.From = conn.RemoteAddr()
+		t.rpcch <- rpc
+
 	}
 
 }

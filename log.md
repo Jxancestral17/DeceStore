@@ -10,3 +10,7 @@ Creazione di una storage decentralizato
 TCPTransport 
 
 - Ogni tipo di transporto avra un channel di comunicazione
+
+
+
+Errori usare fmt.Pritnln(reflect.TypeOf(err))
