@@ -16,8 +16,10 @@ type TCPPeer struct {
 }
 
 type TCPTransport struct {
-	listenAddress string
-	listener      net.Listener
+	listenAddress   string
+	listener        net.Listener
+	shankeHands     HandShakeFunc
+	decoder 		Decoder
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
@@ -34,6 +36,7 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 // Crea un nupvp transport TCP
 func NewTCPTransport(listenAddr string) *TCPTransport {
 	return &TCPTransport{
+		shankeHands: NOPHandshakeFunc,
 		listenAddress: listenAddr,
 	}
 }
@@ -60,13 +63,42 @@ func (t *TCPTransport) startAcceptLoop() {
 		if err != nil {
 			fmt.Printf("TCP accept error: %s\n", err)
 		}
+		fmt.Printf("new incoming connection %+v\n", conn)
 		go t.handleConn(conn)
 	}
 
 }
 
+type Temp struct {}
+
+
 // Gestisce la nuove connessioni
 func (t *TCPTransport) handleConn(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
-	fmt.Printf("new incoming connection %+v\n", peer)
+
+	if err := t.shankeHands(conn); err != nil {
+		conn.
+	}
+
+
+	/*
+		lenDecodeError := 0
+
+		lenDecodeError ++ 
+
+		if lenDecodeError == 5 {
+			conn.Close()
+		}
+		Filtro antispam
+
+	*/
+	//Loop di lettura 
+	msg := &Temp{}
+	for {
+		if err := t.Decoder.Decode(conn, msg ); err != nil {
+			fmt.Printf("TPC error: %s\n", err)
+			continue 
+		}
+	}
+	
 }

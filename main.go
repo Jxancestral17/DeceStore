@@ -1,8 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"log"
+
+	"github.com/Jxancestral17/DeceStore/p2p"
+)
 
 func main() {
+	listenAddr := ":4000"
+	tr := p2p.NewTCPTransport(listenAddr)
 
-	fmt.Println("hi")
+	if err := tr.ListenAndAccept(); err != nil {
+		log.Fatal(err)
+	}
+
+	select {}
 }
