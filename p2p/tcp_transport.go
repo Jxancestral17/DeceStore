@@ -15,11 +15,15 @@ type TCPPeer struct {
 	outbound bool
 }
 
+type TCPTransportOpts struct {
+	ListenAddr    string
+	HandShakeFunc HandShakeFunc
+	Decoder       Decoder
+}
+
 type TCPTransport struct {
-	listenAddress   string
-	listener        net.Listener
-	shankeHands     HandShakeFunc
-	decoder 		Decoder
+	TCPTransportOpts
+	listener net.Listener
 
 	mu    sync.RWMutex
 	peers map[net.Addr]Peer
@@ -34,10 +38,9 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 }
 
 // Crea un nupvp transport TCP
-func NewTCPTransport(listenAddr string) *TCPTransport {
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
-		shankeHands: NOPHandshakeFunc,
-		listenAddress: listenAddr,
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -46,7 +49,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 
 	var err error
 
-	t.listener, err = net.Listen("tcp", t.listenAddress)
+	t.listener, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return err
 	}
@@ -69,36 +72,48 @@ func (t *TCPTransport) startAcceptLoop() {
 
 }
 
-type Temp struct {}
-
+type Temp struct{}
 
 // Gestisce la nuove connessioni
 func (t *TCPTransport) handleConn(conn net.Conn) {
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.shankeHands(conn); err != nil {
-		conn.
+	if err := t.HandShakeFunc(peer); err != nil {
+		conn.Close()
+		fmt.Printf("TPC handshake error: %s\n", err)
+		return
 	}
-
 
 	/*
 		lenDecodeError := 0
 
-		lenDecodeError ++ 
+		lenDecodeError ++
 
 		if lenDecodeError == 5 {
 			conn.Close()
 		}
 		Filtro antispam
 
+
+
+		buf := make([]bytes, 2000)->Fuori dal for
+
+		nel for
+		n, err := conn.Read(buf)
+
+		if err != nil {fmt.Printf("TPC error: %s\n", err)}
+
 	*/
-	//Loop di lettura 
-	msg := &Temp{}
+	//Loop di lettura
+	msg := &Message{}
 	for {
-		if err := t.Decoder.Decode(conn, msg ); err != nil {
+
+		if err := t.Decoder.Decode(conn, msg); err != nil {
 			fmt.Printf("TPC error: %s\n", err)
-			continue 
+			continue
 		}
+		msg.From = conn.RemoteAddr()
+		fmt.Printf("Message: %+v\n", msg)
 	}
-	
+
 }
