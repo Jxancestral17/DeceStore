@@ -26,7 +26,7 @@ Clone the project & setup GOLang
     ```
     go run main.go
     ```
-
+<!--
 
   * Terminal
    ```
@@ -63,3 +63,4 @@ curl -X GET localhost:8080 -d '{"offset": 1}'
   ```
  curl -X GET localhost:8080 -d '{"offset": 2}'
   ```
+-->
