@@ -98,10 +98,7 @@ func (s *Store) Has(key string) bool {
 
 	_, err := os.Stat(fullPathWithRoot)
 
-	if errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
+	return !errors.Is(err, os.ErrNotExist)
 
 }
 
@@ -119,6 +116,10 @@ func (s *Store) Delate(key string) error {
 	}()
 	firstPathNamewithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FristPathName()) //Root + First Path
 	return os.RemoveAll(firstPathNamewithRoot)
+}
+
+func (s *Store) Write(key string, r io.Reader) error {
+	return s.writeStream(key, r)
 }
 
 // Legge il file
@@ -150,6 +151,7 @@ Crea il file
 func (s *Store) writeStream(key string, r io.Reader) error {
 	pathKey := s.PathTransformFunc(key)
 	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName)
+
 	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil {
 		return err
 	}
