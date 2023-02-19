@@ -105,6 +105,11 @@ func (s *Store) Has(key string) bool {
 
 }
 
+// Elimina tutto nella root compresa la root
+func (s *Store) Clear() error {
+	return os.RemoveAll(s.Root)
+}
+
 // Elimina il file
 func (s *Store) Delate(key string) error {
 	pathKey := s.PathTransformFunc(key)
