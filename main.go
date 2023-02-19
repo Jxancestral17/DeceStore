@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/Jxancestral17/DeceStore/p2p"
 )
@@ -21,9 +22,12 @@ func main() {
 		Transport:         tcpTransport,
 	}
 	s := NewFileServer(fileServerOpts)
+	go func() {
+		time.Sleep(time.Second * 3)
+		s.Stop()
+	}()
 
 	if err := s.Start(); err != nil {
 		log.Fatal(err)
 	}
-	select {}
 }
