@@ -1,15 +1,24 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"strings"
 )
 
+/*
+CAS
+In base ad una chiave inserita la trasforma in sha1
+Divide la lunghezza in set da 5 byte
+Creando una path
+Restituisce il path crato e sha1
+*/
 func CASPathTransformFunc(key string) PathKey {
 	hash := sha1.Sum([]byte(key)) //[20]byte
 	hashstr := hex.EncodeToString(hash[:])
@@ -26,7 +35,7 @@ func CASPathTransformFunc(key string) PathKey {
 
 	return PathKey{
 		PathName: strings.Join(paths, "/"),
-		Orginal:  hashstr,
+		Filename: hashstr,
 	}
 
 }
@@ -35,11 +44,19 @@ type PathTransformFunc func(string) PathKey
 
 type PathKey struct {
 	PathName string
-	Orginal  string
+	Filename string
 }
 
-func (p PathKey) Filename() string {
-	return fmt.Sprintf("%s/%s", p.PathName, p.Orginal)
+func (p PathKey) FristPathName() string {
+	paths := strings.Split(p.PathName, "/")
+	if len(paths) == 0 {
+		return ""
+	}
+	return paths[0]
+}
+
+func (p PathKey) FullPath() string {
+	return fmt.Sprintf("%s/%s", p.PathName, p.Filename)
 }
 
 type StoreOpts struct {
@@ -54,12 +71,56 @@ type Store struct {
 	StoreOpts
 }
 
+// Crea un nuovo store
 func NewStore(opts StoreOpts) *Store {
 	return &Store{
 		StoreOpts: opts,
 	}
 }
 
+func (s *Store) Has(key string) bool {
+	pathKey := s.PathTransformFunc(key)
+
+	_, err := os.Stat(pathKey.FullPath())
+	if err == fs.ErrNotExist {
+		return false
+	}
+	return true
+
+}
+
+func (s *Store) Delate(key string) error {
+	pathKey := s.PathTransformFunc(key)
+
+	defer func() {
+		log.Printf("deleted [%s] from disk", pathKey.Filename)
+	}()
+	return os.RemoveAll(pathKey.FristPathName())
+}
+
+// Read
+func (s *Store) Read(key string) (io.Reader, error) {
+	f, err := s.readStream(key)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, f)
+
+	return buf, nil
+}
+
+func (s *Store) readStream(key string) (io.ReadCloser, error) {
+	pathkey := s.PathTransformFunc(key)
+
+	return os.Open(pathkey.FullPath())
+}
+
+/*
+Crea il file
+*/
 func (s *Store) writeStream(key string, r io.Reader) error {
 	pathKey := s.PathTransformFunc(key)
 
@@ -67,9 +128,9 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 		return err
 	}
 
-	pathAndFilename := pathKey.Filename()
+	fullPath := pathKey.FullPath()
 
-	f, err := os.Create(pathAndFilename)
+	f, err := os.Create(fullPath)
 	if err != nil {
 		return err
 	}
@@ -79,7 +140,7 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 		return err
 	}
 
-	log.Printf("written (%d) bytes to disk: %s", n, pathAndFilename)
+	log.Printf("written (%d) bytes to disk: %s", n, fullPath)
 
 	return nil
 
