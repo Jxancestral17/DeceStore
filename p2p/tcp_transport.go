@@ -9,8 +9,9 @@ import (
 
 // Rappresenta quando la connessione TCP è stabilita con il nodo
 type TCPPeer struct {
-	//Sottostante la connessione del peer
-	conn net.Conn
+	//Sottostante la connessione del peer in questo caso
+	// è un a tcp connection
+	net.Conn
 	//se dial(componi) una connesione => outbound == true
 	//se accetti una connesione => outbound == false
 	outbound bool
@@ -19,14 +20,14 @@ type TCPPeer struct {
 // Crea un nuvo TCP peer
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
-		conn:     conn,
+		Conn:     conn,
 		outbound: outbound,
 	}
 }
 
-// Chiusura dell'interfaccia del Peer
-func (p *TCPPeer) Close() error {
-	return p.conn.Close()
+func (p *TCPPeer) Send(b []byte) error {
+	_, err := p.Conn.Write(b)
+	return err
 }
 
 type TCPTransportOpts struct {
@@ -59,9 +60,32 @@ func (t *TCPTransport) Consume() <-chan RPC {
 	return t.rpcch
 }
 
+// // Remote implements the peer interface e ritorno
+// // l'address remote
+// func (p *TCPPeer) RemoteAddr() net.Addr {
+// 	return p.conn.RemoteAddr()
+// }
+
+// Chiusura dell'interfaccia del Peer
+// func (p *TCPPeer) Close() error {
+// 	return p.Conn.Close()
+// }
+
 // Chiude il transport interface
 func (t *TCPTransport) Close() error {
 	return t.listener.Close()
+}
+
+// Dial in traposrt interface
+func (t TCPTransport) Dial(addr string) error {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+
+	go t.handleConn(conn, true)
+
+	return nil
 }
 
 // Qui rimane in ascolto
@@ -94,9 +118,7 @@ func (t *TCPTransport) startAcceptLoop() {
 			fmt.Printf("TCP accept error: %s\n", err)
 		}
 
-		fmt.Printf("new incoming connection %+v\n", conn)
-
-		go t.handleConn(conn)
+		go t.handleConn(conn, false)
 
 	}
 
@@ -105,13 +127,13 @@ func (t *TCPTransport) startAcceptLoop() {
 type Temp struct{}
 
 // Gestisce la nuove connessioni
-func (t *TCPTransport) handleConn(conn net.Conn) {
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 	defer func() {
 		fmt.Printf("Dropping perr connection: %s", err)
 		conn.Close()
 	}()
-	peer := NewTCPPeer(conn, true)
+	peer := NewTCPPeer(conn, outbound)
 
 	if err = t.HandShakeFunc(peer); err != nil {
 		//conn.Close()
