@@ -39,10 +39,15 @@ func main() {
 	go func() {
 		log.Fatal(s1.Start())
 	}()
-	go s2.Start()
 	time.Sleep(1 * time.Second)
+
+	go s2.Start()
+
+	time.Sleep(1 * time.Second)
+
 	data := bytes.NewReader([]byte("test"))
 
 	s2.StoreData("privatekey", data)
 
+	select {}
 }

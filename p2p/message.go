@@ -9,5 +9,5 @@ tra due nodi in una rete
 */
 type RPC struct {
 	From    net.Addr
-	PayLoad []byte
+	Payload []byte
 }

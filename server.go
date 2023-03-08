@@ -110,9 +110,10 @@ func (s *FileServer) loop() {
 		select {
 		case msg := <-s.Transport.Consume():
 			var p Payload
-			if err := gob.NewDecoder(bytes.NewReader(msg.PayLoad)).Decode(&p); err != nil {
+			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
 				log.Fatal(err)
 			}
+			fmt.Printf("%+v\n", p)
 		case <-s.quitch:
 			return
 		}
