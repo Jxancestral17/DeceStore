@@ -42,11 +42,6 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
-type Payload struct {
-	Key  string
-	Data []byte
-}
-
 func (s *FileServer) broadcast(p *Payload) error {
 	peers := []io.Writer{}
 
@@ -57,6 +52,11 @@ func (s *FileServer) broadcast(p *Payload) error {
 	mw := io.MultiWriter(peers...)
 
 	return gob.NewEncoder(mw).Encode(p)
+}
+
+type Payload struct {
+	Key  string
+	Data []byte
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
@@ -110,7 +110,7 @@ func (s *FileServer) loop() {
 		select {
 		case msg := <-s.Transport.Consume():
 			var p Payload
-			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+			if err := gob.NewDecoder(bytes.NewReader(msg.PayLoad)).Decode(&p); err != nil {
 				log.Fatal(err)
 			}
 		case <-s.quitch:

@@ -130,7 +130,7 @@ type Temp struct{}
 func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 	defer func() {
-		fmt.Printf("Dropping perr connection: %s", err)
+		fmt.Printf("Dropping peer connection: %s", err)
 		conn.Close()
 	}()
 	peer := NewTCPPeer(conn, outbound)
