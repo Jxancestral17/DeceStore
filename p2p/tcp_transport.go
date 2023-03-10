@@ -51,8 +51,13 @@ type TCPTransport struct {
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		rpcch:            make(chan RPC),
+		rpcch:            make(chan RPC, 1024),
 	}
+}
+
+// Addr ritorno address del  connessione accettato
+func (t *TCPTransport) Addr() string {
+	return t.ListenAddr
 }
 
 /*
@@ -152,18 +157,22 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	}
 
 	//Loop di lettura
-	rpc := RPC{}
 	for {
+		rpc := RPC{}
 		err = t.Decoder.Decode(conn, &rpc)
 		if err != nil {
 			return
 		}
+
 		rpc.From = conn.RemoteAddr().String()
-		peer.Wg.Add(1)
-		fmt.Println("waiting till stream is done")
+		if rpc.Stream {
+			peer.Wg.Add(1)
+			fmt.Printf("[%s] incoming stream, waiting...\n", conn.RemoteAddr())
+			peer.Wg.Wait()
+			fmt.Printf("[%s] stream closed, resuming read loop...\n", conn.RemoteAddr())
+			continue
+		}
 		t.rpcch <- rpc
-		peer.Wg.Wait()
-		fmt.Println("stream done continueing ")
 
 	}
 
