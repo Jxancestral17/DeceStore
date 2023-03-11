@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -123,26 +122,38 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 }
 
 // Legge il file
-func (s *Store) Read(key string) (io.Reader, error) {
-	f, err := s.readStream(key)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
+func (s *Store) Read(key string) (int64, io.Reader, error) {
+	return s.readStream(key)
+	// n, f, err := s.readStream(key)
+	// if err != nil {
+	// 	return n, nil, err
+	// }
+	// defer f.Close()
 
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, f)
+	// buf := new(bytes.Buffer)
+	// _, err = io.Copy(buf, f)
 
-	return buf, nil
+	// return n, buf, nil
 }
 
 /*
 Apre il file
 */
-func (s *Store) readStream(key string) (io.ReadCloser, error) {
+func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	pathkey := s.PathTransformFunc(key)
 	pathKeyWithRoot := fmt.Sprintf("%s/%s", s.Root, pathkey.FullPath())
-	return os.Open(pathKeyWithRoot)
+
+	file, err := os.Open(pathKeyWithRoot)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	fi, err := file.Stat()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return fi.Size(), file, nil
 }
 
 /*

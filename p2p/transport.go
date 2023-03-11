@@ -9,8 +9,9 @@ Peer
 type Peer interface {
 	//Impelemente tutte le funzioni possibili in net librari
 	net.Conn
-	//Conn() net.Conn
 	Send([]byte) error
+	CloseStream()
+	//Conn() net.Conn
 	//RemoteAddr() net.Addr
 	//Close() error
 }
