@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"bytes"
 	"log"
 	"time"
 
@@ -19,6 +18,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 	tcpTransport := p2p.NewTCPTransport(tcptransporOpts)
 
 	fileServerOpts := FileServerOpts{
+		EncKey:            newEncryptionKey(),
 		StorageRoot:       listenAddr + "_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
@@ -46,20 +46,19 @@ func main() {
 
 	time.Sleep(2 * time.Second)
 
-	// data := bytes.NewReader([]byte("test"))
+	data := bytes.NewReader([]byte("test"))
 
-	// s2.Store(fmt.Sprintf("privatekey_%d", i), data)
-	// time.Sleep(time.Millisecond * 5)
+	s2.Store("file.jpg", data)
 
-	r, err := s2.Get("foo")
-	if err != nil {
-		log.Fatal(err)
-	}
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
+	// r, err := s2.Get("foo")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// b, err := ioutil.ReadAll(r)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(string(b))
 
 	//select {}
 }
